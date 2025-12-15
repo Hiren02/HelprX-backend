@@ -163,6 +163,26 @@ class AuthService {
   }
 
   /**
+   * Get user detail with associations
+   */
+  async getUserDetail(userId) {
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          association: 'addresses',
+          required: false,
+        },
+      ],
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return this.sanitizeUser(user);
+  }
+
+  /**
    * Generate access token
    */
   generateAccessToken(user) {

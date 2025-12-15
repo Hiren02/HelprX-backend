@@ -23,6 +23,6 @@ router.post('/refresh', validate(refreshTokenSchema), authController.refreshToke
 // Protected routes
 router.post('/logout', authenticate, authController.logout);
 router.post('/change-password', authenticate, validate(changePasswordSchema), authController.changePassword);
-router.get('/me', authenticate, authController.getCurrentUser);
+router.get('/me', authenticate, authController.getUserDetail);
 
 module.exports = router;

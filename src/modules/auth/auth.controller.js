@@ -56,8 +56,9 @@ class AuthController {
    * Get current user
    * GET /api/v1/auth/me
    */
-  getCurrentUser = asyncHandler(async (req, res) => {
-    return ApiResponse.success(res, req.user, 'User retrieved successfully');
+  getUserDetail = asyncHandler(async (req, res) => {
+    const userDetail = await authService.getUserDetail(req.user.id);
+    return ApiResponse.success(res, userDetail, 'User retrieved successfully');
   });
 }
 
