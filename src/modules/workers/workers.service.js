@@ -177,7 +177,7 @@ class WorkerService {
           attributes: ['id', 'addressLine', 'city', 'state', 'pincode']
         },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });

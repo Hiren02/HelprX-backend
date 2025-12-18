@@ -63,14 +63,15 @@ class AddressService {
    * Get addresses for user or worker
    */
   async getUserAddresses(ownerId, ownerType = 'user', filters = {}) {
+    console.log("ownerId",ownerId)
     const { page = 1, limit = 10 } = filters;
     const offset = (page - 1) * limit;
 
-    const where = ownerType === 'user' ? { userId: ownerId } : { workerId: ownerId };
+    const where = { user_id: ownerId };
 
     const { count, rows } = await Address.findAndCountAll({
       where,
-      order: [['isDefault', 'DESC'], ['createdAt', 'DESC']],
+      order: [['is_default', 'DESC'], ['created_at', 'DESC']],
       limit,
       offset,
     });
@@ -88,7 +89,7 @@ class AddressService {
    */
   async getAddressById(addressId, userId) {
     const address = await Address.findOne({
-      where: { id: addressId, userId },
+      where: { id: addressId, user_id: userId },
     });
 
     if (!address) {

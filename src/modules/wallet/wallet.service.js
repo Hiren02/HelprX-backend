@@ -51,7 +51,7 @@ class WalletService {
 
     const { count, rows } = await Transaction.findAndCountAll({
       where,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });

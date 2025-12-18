@@ -212,7 +212,7 @@ class NotificationService {
 
     const { count, rows } = await Notification.findAndCountAll({
       where,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset,
     });

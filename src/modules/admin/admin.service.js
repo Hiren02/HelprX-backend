@@ -26,7 +26,7 @@ class AdminService {
     const { count, rows } = await User.findAndCountAll({
       where,
       attributes: { exclude: ['password', 'refreshToken'] },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });
@@ -47,7 +47,7 @@ class AdminService {
       attributes: { exclude: ['password', 'refreshToken'] },
       include: [
         { model: Address, as: 'addresses' },
-        { model: Job, as: 'jobs', limit: 5, order: [['createdAt', 'DESC']] },
+        { model: Job, as: 'jobs', limit: 5, order: [['created_at', 'DESC']] },
       ],
     });
 
@@ -110,7 +110,7 @@ class AdminService {
       include: [
         { model: User, as: 'user', attributes: ['id', 'email', 'isActive'] },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });
@@ -130,8 +130,8 @@ class AdminService {
     const worker = await Worker.findByPk(workerId, {
       include: [
         { model: User, as: 'user', attributes: { exclude: ['password', 'refreshToken'] } },
-        { model: Job, as: 'assignedJobs', limit: 10, order: [['createdAt', 'DESC']] },
-        { model: Rating, as: 'ratings', limit: 10, order: [['createdAt', 'DESC']] },
+        { model: Job, as: 'assignedJobs', limit: 10, order: [['created_at', 'DESC']] },
+        { model: Rating, as: 'ratings', limit: 10, order: [['created_at', 'DESC']] },
       ],
     });
 
@@ -202,7 +202,7 @@ class AdminService {
         { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'phone'] },
         { model: Address, as: 'address', attributes: ['addressLine', 'city', 'state'] },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });
@@ -348,7 +348,7 @@ class AdminService {
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
       ],
-      order: [['createdAt', 'ASC']],
+      order: [['created_at', 'ASC']],
     });
 
     return workers;
@@ -365,7 +365,7 @@ class AdminService {
         { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'phone'] },
         { model: Address, as: 'address' },
       ],
-      order: [['createdAt', 'ASC']],
+      order: [['created_at', 'ASC']],
     });
 
     return jobs;

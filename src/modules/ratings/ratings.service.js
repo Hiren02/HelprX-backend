@@ -84,7 +84,7 @@ class RatingService {
         { model: User, as: 'user', attributes: ['id', 'name'] },
         { model: Job, as: 'job', attributes: ['id', 'serviceType', 'title'] },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });
@@ -130,7 +130,7 @@ class RatingService {
         { model: Worker, as: 'worker', attributes: ['id', 'name'] },
         { model: Job, as: 'job', attributes: ['id', 'serviceType', 'title'] },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: parseInt(limit),
       offset,
     });

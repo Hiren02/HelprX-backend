@@ -304,7 +304,7 @@ class JobService {
         { model: Address, as: 'address' },
         { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'avgRating'] },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset,
     });
@@ -335,7 +335,7 @@ class JobService {
         { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
         { model: Address, as: 'address' },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset,
     });

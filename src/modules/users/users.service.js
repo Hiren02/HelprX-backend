@@ -13,7 +13,7 @@ class UserService {
           model: Address, 
           as: 'addresses',
           limit: 5,
-          order: [['createdAt', 'DESC']],
+          order: [['created_at', 'DESC']],
         },
       ],
     });
