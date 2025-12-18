@@ -57,6 +57,12 @@ const createAdminSchema = Joi.object({
   }),
 });
 
+const completeJobSchema = Joi.object({
+  completionNotes: Joi.string().min(5).max(500).optional().messages({
+    'string.min': 'Notes must be at least 5 characters',
+  }),
+});
+
 module.exports = {
   updateUserStatusSchema,
   updateKYCSchema,
@@ -64,4 +70,5 @@ module.exports = {
   cancelJobSchema,
   resolveDisputeSchema,
   createAdminSchema,
+  completeJobSchema,
 };

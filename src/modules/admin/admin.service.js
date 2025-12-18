@@ -278,6 +278,33 @@ class AdminService {
       const worker = await Worker.findByPk(job.assignedWorkerId);
       await notificationService.sendJobNotification(worker.userId, job, 'job_cancelled');
     }
+    return job;
+  }
+
+  /**
+   * Complete job (admin override)
+   */
+  async completeJob(jobId) {
+    const job = await Job.findByPk(jobId);
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    if (job.status === JOB_STATUS.COMPLETED || job.status === JOB_STATUS.CANCELLED) {
+      throw new Error('Job is already completed or cancelled');
+    }
+
+    await job.update({
+      status: JOB_STATUS.COMPLETED,
+      completedAt: new Date(),
+    });
+
+    // Notify both parties
+    await notificationService.sendJobNotification(job.userId, job, 'job_completed');
+    if (job.assignedWorkerId) {
+      const worker = await Worker.findByPk(job.assignedWorkerId);
+      await notificationService.sendJobNotification(worker.userId, job, 'job_completed');
+    }
 
     return job;
   }

@@ -7,7 +7,7 @@ const cloudinaryService = require('../services/cloudinary.service');
 const uploadKYCDocuments = cloudinaryService.createUploadMiddleware({
   folder: 'helprx/kyc',
   maxFileSize: 5 * 1024 * 1024, // 5MB
-  allowedFormats: ['jpg', 'jpeg', 'png', 'pdf'],
+  allowedFormats: ['jpg', 'jpeg', 'png'],
   maxFiles: 4,
 }).fields([
   { name: 'aadhar', maxCount: 1 },

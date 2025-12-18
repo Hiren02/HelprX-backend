@@ -125,24 +125,28 @@
  *       content:
  *         multipart/form-data:
  *           schema:
- *             type: object
+ *             required:
+ *               - aadhar
+ *               - pan
+ *               - drivingLicense
+ *               - photo
  *             properties:
  *               aadhar:
  *                 type: string
  *                 format: binary
- *                 description: Aadhar card document
+ *                 description: Aadhar card image (jpg, jpeg, png)
  *               pan:
  *                 type: string
  *                 format: binary
- *                 description: PAN card document
+ *                 description: PAN card image (jpg, jpeg, png)
  *               drivingLicense:
  *                 type: string
  *                 format: binary
- *                 description: Driving license
+ *                 description: Driving license image (jpg, jpeg, png)
  *               photo:
  *                 type: string
  *                 format: binary
- *                 description: Profile photo
+ *                 description: Profile photo (jpg, jpeg, png)
  *     responses:
  *       200:
  *         description: KYC documents uploaded successfully

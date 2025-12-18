@@ -282,17 +282,16 @@ All worker endpoints require **worker role** authentication.
 
 🔒 Requires worker authentication
 
-**Request Body:**
+**Request Body:** (All fields mandatory. Allowed formats: jpg, jpeg, png)
 ```json
 {
-  "documents": {
-    "aadhar": "https://example.com/aadhar.jpg",
-    "pan": "https://example.com/pan.jpg",
-    "drivingLicense": "https://example.com/dl.jpg",
-    "photo": "https://example.com/photo.jpg"
-  }
+  "aadhar": "binary_image_file",
+  "pan": "binary_image_file",
+  "drivingLicense": "binary_image_file",
+  "photo": "binary_image_file"
 }
 ```
+*Note: This endpoint accepts `multipart/form-data`, not JSON.*
 
 ### Get Worker Statistics
 **GET** `/workers/stats`

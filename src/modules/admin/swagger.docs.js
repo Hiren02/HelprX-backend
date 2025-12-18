@@ -305,6 +305,36 @@
 
 /**
  * @swagger
+ * /admin/jobs/{id}/complete:
+ *   put:
+ *     summary: Complete job (admin override)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               completionNotes:
+ *                 type: string
+ *                 description: Optional notes (currently for logging only)
+ *     responses:
+ *       200:
+ *         description: Job completed successfully
+ */
+
+/**
+ * @swagger
  * /admin/disputes:
  *   get:
  *     summary: Get disputed jobs

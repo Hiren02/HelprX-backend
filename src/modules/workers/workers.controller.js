@@ -47,24 +47,23 @@ class WorkerController {
     // Files are uploaded via Cloudinary middleware
     // req.files contains the uploaded files
     const documents = {};
-    
-    if (req.files) {
-      if (req.files.aadhar && req.files.aadhar[0]) {
-        documents.aadhar = req.files.aadhar[0].path; // Cloudinary URL
-      }
-      if (req.files.pan && req.files.pan[0]) {
-        documents.pan = req.files.pan[0].path;
-      }
-      if (req.files.drivingLicense && req.files.drivingLicense[0]) {
-        documents.drivingLicense = req.files.drivingLicense[0].path;
-      }
-      if (req.files.photo && req.files.photo[0]) {
-        documents.photo = req.files.photo[0].path;
-      }
+    const requiredDocs = ['aadhar', 'pan', 'drivingLicense', 'photo'];
+    const missingDocs = [];
+
+    if (!req.files) {
+        return ApiResponse.badRequest(res, 'No files uploaded');
     }
 
-    if (Object.keys(documents).length === 0) {
-      return ApiResponse.badRequest(res, 'At least one document is required');
+    requiredDocs.forEach(docField => {
+        if (req.files[docField] && req.files[docField][0]) {
+            documents[docField] = req.files[docField][0].path;
+        } else {
+            missingDocs.push(docField);
+        }
+    });
+
+    if (missingDocs.length > 0) {
+      return ApiResponse.badRequest(res, `Missing required documents: ${missingDocs.join(', ')}`);
     }
 
     const worker = await workerService.uploadKYCDocuments(req.user.id, documents);

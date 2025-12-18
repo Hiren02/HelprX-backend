@@ -130,6 +130,15 @@ class AdminController {
     return ApiResponse.success(res, job, 'Job cancelled successfully');
   });
 
+  /**
+   * Complete job
+   * PUT /api/v1/admin/jobs/:id/complete
+   */
+  completeJob = asyncHandler(async (req, res) => {
+    const job = await adminService.completeJob(req.params.id);
+    return ApiResponse.success(res, job, 'Job completed successfully');
+  });
+
   // ========== Dispute Management ==========
 
   /**

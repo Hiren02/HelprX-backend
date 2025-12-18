@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, Worker } = require('../../database/models');
-const { USER_ROLES } = require('../../common/constants');
+const { USER_ROLES, KYC_STATUS } = require('../../common/constants');
 
 class AuthService {
   /**
@@ -82,6 +82,15 @@ class AuthService {
 
     if (!isPasswordValid) {
       throw new Error('Invalid credentials');
+    }
+
+    // Check if worker is verified
+    if (user.role === USER_ROLES.WORKER) {
+      const worker = await Worker.findOne({ where: { userId: user.id } });
+      // If worker profile missing or not verified, block login
+      if (worker && worker.kycStatus !== KYC_STATUS.VERIFIED) {
+        throw new Error(`Login restricted. KYC Status: ${worker.kycStatus}. Admin approval required.`);
+      }
     }
 
     // Generate tokens

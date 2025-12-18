@@ -9,6 +9,7 @@ const {
   cancelJobSchema,
   resolveDisputeSchema,
   createAdminSchema,
+  completeJobSchema,
 } = require('./admin.validator');
 
 const router = express.Router();
@@ -33,6 +34,7 @@ router.get('/kyc/pending', adminController.getPendingKYC);
 router.get('/jobs', adminController.getAllJobs);
 router.post('/jobs/:id/assign', validate(manualAssignSchema), adminController.manuallyAssignJob);
 router.put('/jobs/:id/cancel', validate(cancelJobSchema), adminController.cancelJob);
+router.put('/jobs/:id/complete', validate(completeJobSchema), adminController.completeJob);
 
 // ========== Dispute Management ==========
 router.get('/disputes', adminController.getDisputedJobs);
