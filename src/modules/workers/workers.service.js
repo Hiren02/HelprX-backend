@@ -31,7 +31,7 @@ class WorkerService {
       throw new Error('Worker profile not found');
     }
 
-    const { name, companyName, bio, experienceYears, latitude, longitude } = updateData;
+    const { name, companyName, bio, experienceYears, latitude, longitude, profileImage } = updateData;
 
     await worker.update({
       name: name !== undefined ? name : worker.name,
@@ -40,6 +40,7 @@ class WorkerService {
       experienceYears: experienceYears !== undefined ? experienceYears : worker.experienceYears,
       latitude: latitude !== undefined ? latitude : worker.latitude,
       longitude: longitude !== undefined ? longitude : worker.longitude,
+      profileImage: profileImage !== undefined ? profileImage : worker.profileImage,
     });
 
     return worker;

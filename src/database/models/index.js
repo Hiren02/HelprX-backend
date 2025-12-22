@@ -23,7 +23,6 @@ User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 
 // Address associations
 Address.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-Address.belongsTo(Worker, { foreignKey: 'workerId', as: 'worker' }); // New association
 Address.hasMany(Job, { foreignKey: 'addressId', as: 'jobs' });
 
 // Worker associations

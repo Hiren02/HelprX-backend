@@ -1,7 +1,10 @@
 const express = require('express');
 const { authenticate, isWorker } = require('../../common/middleware/auth.middleware');
 const { validate } = require('../../common/middleware/validation.middleware');
-const { uploadKYCDocuments } = require('../../common/middleware/upload.middleware');
+const {
+  uploadKYCDocuments,
+  uploadProfilePicture,
+} = require('../../common/middleware/upload.middleware');
 const workerController = require('./workers.controller');
 const {
   updateProfileSchema,
@@ -17,6 +20,7 @@ router.use(isWorker);
 
 router.get('/profile', workerController.getProfile);
 router.put('/profile', validate(updateProfileSchema), workerController.updateProfile);
+router.put('/profile/image', uploadProfilePicture, workerController.updateProfileImage);
 router.put('/skills', validate(updateSkillsSchema), workerController.updateSkills);
 router.put('/availability', validate(updateAvailabilitySchema), workerController.updateAvailability);
 router.post('/kyc', uploadKYCDocuments, workerController.uploadKYC);

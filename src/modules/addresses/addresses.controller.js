@@ -107,7 +107,7 @@ class AddressController {
       return ApiResponse.notFound(res, 'Worker profile not found');
     }
 
-    const address = await addressService.createAddress(worker.id, req.body, 'worker');
+    const address = await addressService.createAddress(req.user.id, req.body, 'worker');
     return ApiResponse.created(res, address, 'Address created successfully');
   });
 
@@ -122,7 +122,7 @@ class AddressController {
       return ApiResponse.notFound(res, 'Worker profile not found');
     }
 
-    const result = await addressService.getUserAddresses(worker.id, 'worker', req.query);
+    const result = await addressService.getUserAddresses(req.user.id, 'worker', req.query);
 
     return ApiResponse.paginated(
       res,
@@ -132,6 +132,26 @@ class AddressController {
       result.total,
       'Addresses retrieved successfully'
     );
+  });
+
+  /**
+   * Update worker address
+   * PUT /api/v1/addresses/worker/:id
+   */
+  updateWorkerAddress = asyncHandler(async (req, res) => {
+    const worker = await Worker.findOne({ where: { userId: req.user.id } });
+
+    if (!worker) {
+      return ApiResponse.notFound(res, 'Worker profile not found');
+    }
+
+    const address = await addressService.updateAddress(
+      req.params.id,
+      req.user.id,
+      req.body,
+      'worker'
+    );
+    return ApiResponse.success(res, address, 'Address updated successfully');
   });
 }
 

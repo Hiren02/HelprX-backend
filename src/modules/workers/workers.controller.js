@@ -1,4 +1,5 @@
 const workerService = require('./workers.service');
+const cloudinaryService = require('../../common/services/cloudinary.service');
 const ApiResponse = require('../../common/utils/response');
 const { asyncHandler } = require('../../common/middleware/error.middleware');
 
@@ -19,6 +20,45 @@ class WorkerController {
   updateProfile = asyncHandler(async (req, res) => {
     const worker = await workerService.updateWorkerProfile(req.user.id, req.body);
     return ApiResponse.success(res, worker, 'Profile updated successfully');
+  });
+
+  /**
+   * Update profile image
+   * PUT /api/v1/workers/profile/image
+   */
+  updateProfileImage = asyncHandler(async (req, res) => {
+    console.log('Update Profile Image Request - File:', req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      hasBuffer: !!req.file.buffer,
+      path: req.file.path
+    } : 'undefined');
+    console.log('Update Profile Image Request - Body:', req.body);
+
+    if (!req.file) {
+      return ApiResponse.badRequest(res, 'No image file uploaded');
+    }
+
+    let imageUrl = req.file.path;
+
+    // If memory storage is used (req.file.buffer exists but req.file.path doesn't)
+    if (!imageUrl && req.file.buffer) {
+      const result = await cloudinaryService.uploadImage(req.file.buffer, {
+        folder: 'helprx/profiles',
+      });
+      imageUrl = result.url;
+    }
+
+    if (!imageUrl) {
+      return ApiResponse.error(res, 'Failed to process image');
+    }
+
+    const worker = await workerService.updateWorkerProfile(req.user.id, {
+      profileImage: imageUrl,
+    });
+    return ApiResponse.success(res, worker, 'Profile image updated successfully');
   });
 
   /**

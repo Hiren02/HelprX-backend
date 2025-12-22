@@ -1,5 +1,5 @@
 
-const { Address } = require('../../database/models');
+const { Address, Worker } = require('../../database/models');
 const { Op } = require('sequelize');
 
 class AddressService {
@@ -8,7 +8,7 @@ class AddressService {
    * Supports both user and worker addresses
    */
   async createAddress(ownerId, addressData, ownerType = 'user') {
-    const { label, addressLine, city, state, pincode, latitude, longitude } = addressData;
+    const { label, addressLine, landmark, city, state, pincode, latitude, longitude } = addressData;
 
     // Validate owner type
     if (!['user', 'worker'].includes(ownerType)) {
@@ -30,8 +30,12 @@ class AddressService {
 
     // If this is the first address, make it default
     const existingAddresses = await Address.count({
-      where: ownerType === 'user' ? { userId: ownerId } : { workerId: ownerId },
+      where: { userId: ownerId },
     });
+
+    if (ownerType === 'worker' && existingAddresses > 0) {
+        throw new Error('Worker can only have one service address. Please update the existing one.');
+    }
 
     const isDefault = existingAddresses === 0 ? true : addressData.isDefault || false;
 
@@ -39,15 +43,16 @@ class AddressService {
     if (isDefault) {
       await Address.update(
         { isDefault: false },
-        { where: ownerType === 'user' ? { userId: ownerId } : { workerId: ownerId } }
+        { where: { userId: ownerId } }
       );
     }
 
     // Create address with proper ownership
     const address = await Address.create({
-      [ownerType === 'user' ? 'userId' : 'workerId']: ownerId,
+      userId: ownerId,
       label,
       addressLine,
+      landmark,
       city,
       state,
       pincode,
@@ -56,6 +61,14 @@ class AddressService {
       isDefault,
     });
 
+    // Sync worker location if this is a worker's address
+    if (ownerType === 'worker') {
+      await Worker.update(
+        { latitude, longitude },
+        { where: { userId: ownerId } }
+      );
+    }
+
     return address;
   }
 
@@ -63,23 +76,23 @@ class AddressService {
    * Get addresses for user or worker
    */
   async getUserAddresses(ownerId, ownerType = 'user', filters = {}) {
-    console.log("ownerId",ownerId)
+    console.log("ownerId", ownerId, "ownerType", ownerType);
     const { page = 1, limit = 10 } = filters;
     const offset = (page - 1) * limit;
 
-    const where = { user_id: ownerId };
+    const where = { userId: ownerId };
 
     const { count, rows } = await Address.findAndCountAll({
       where,
-      order: [['is_default', 'DESC'], ['created_at', 'DESC']],
-      limit,
-      offset,
+      order: [['isDefault', 'DESC'], ['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
     });
 
     return {
       addresses: rows,
       total: count,
-      page,
+      page: parseInt(page),
       totalPages: Math.ceil(count / limit),
     };
   }
@@ -87,10 +100,13 @@ class AddressService {
   /**
    * Get a single address by ID
    */
-  async getAddressById(addressId, userId) {
-    const address = await Address.findOne({
-      where: { id: addressId, user_id: userId },
-    });
+  async getAddressById(addressId, ownerId, ownerType = 'user') {
+    const where = { 
+      id: addressId,
+      userId: ownerId
+    };
+
+    const address = await Address.findOne({ where });
 
     if (!address) {
       throw new Error('Address not found');
@@ -102,10 +118,10 @@ class AddressService {
   /**
    * Update an address
    */
-  async updateAddress(addressId, userId, updateData) {
-    const address = await this.getAddressById(addressId, userId);
+  async updateAddress(addressId, ownerId, updateData, ownerType = 'user') {
+    const address = await this.getAddressById(addressId, ownerId, ownerType);
 
-    const { label, addressLine, city, state, pincode, latitude, longitude } = updateData;
+    const { label, addressLine, landmark, city, state, pincode, latitude, longitude } = updateData;
 
     // Validate coordinates if provided
     if (latitude !== undefined) {
@@ -124,12 +140,24 @@ class AddressService {
     await address.update({
       label: label !== undefined ? label : address.label,
       addressLine: addressLine !== undefined ? addressLine : address.addressLine,
+      landmark: landmark !== undefined ? landmark : address.landmark,
       city: city !== undefined ? city : address.city,
       state: state !== undefined ? state : address.state,
       pincode: pincode !== undefined ? pincode : address.pincode,
       latitude: latitude !== undefined ? latitude : address.latitude,
       longitude: longitude !== undefined ? longitude : address.longitude,
     });
+
+    // Sync worker location if this is a worker's address
+    if (ownerType === 'worker') {
+      await Worker.update(
+        { 
+          latitude: latitude !== undefined ? latitude : address.latitude,
+          longitude: longitude !== undefined ? longitude : address.longitude
+        },
+        { where: { userId: ownerId } }
+      );
+    }
 
     return address;
   }
@@ -142,93 +170,83 @@ class AddressService {
 
     // Check if this address is being used in any active jobs
     const { Job } = require('../../database/models');
-    const activeJob = await Job.findOne({
-      where: {
-        addressId,
-        status: {
-          [Op.in]: ['created', 'matching', 'assigned', 'in_progress'],
-        },
-      },
-    });
+    const jobCount = await Job.count({ where: { addressId: address.id, status: { [Op.notIn]: ['completed', 'cancelled'] } } });
 
-    if (activeJob) {
-      throw new Error('Cannot delete address. It is being used in an active job.');
+    if (jobCount > 0) {
+      throw new Error('Cannot delete address used in active jobs');
     }
 
     await address.destroy();
-    return { message: 'Address deleted successfully' };
+    return true;
   }
 
   /**
-   * Set default address for user
+   * Set an address as default
    */
   async setDefaultAddress(addressId, userId) {
     const address = await this.getAddressById(addressId, userId);
 
-    // Update user's default address
+    // Unset current default
+    await Address.update({ isDefault: false }, { where: { userId, isDefault: true } });
+
+    // Set new default
+    address.isDefault = true;
+    await address.save();
+
+    // Also update user's defaultAddressId
     const { User } = require('../../database/models');
-    await User.update(
-      { defaultAddressId: addressId },
-      { where: { id: userId } }
-    );
+    await User.update({ defaultAddressId: address.id }, { where: { id: userId } });
 
     return address;
   }
 
   /**
-   * Search addresses by city or pincode
+   * Search for an address by query
    */
-  async searchAddresses(userId, searchTerm) {
-    const addresses = await Address.findAll({
+  async searchAddresses(ownerId, query) {
+    return await Address.findAll({
       where: {
-        userId,
+        userId: ownerId,
         [Op.or]: [
-          { city: { [Op.iLike]: `%${searchTerm}%` } },
-          { pincode: { [Op.iLike]: `%${searchTerm}%` } },
-          { addressLine: { [Op.iLike]: `%${searchTerm}%` } },
+          { label: { [Op.iLike]: `%${query}%` } },
+          { addressLine: { [Op.iLike]: `%${query}%` } },
+          { city: { [Op.iLike]: `%${query}%` } },
         ],
       },
-      order: [['createdAt', 'DESC']],
+      limit: 10,
     });
-
-    return addresses;
   }
 
   /**
-   * Get addresses near a location (within radius)
+   * Get nearby addresses using PostGIS
    */
-  async getNearbyAddresses(userId, latitude, longitude, radiusKm = 10) {
-    const { sequelize } = require('../../config/database');
+  async getNearbyAddresses(latitude, longitude, radiusKm = 10) {
+    const { sequelize } = require('../../database/models');
+    const radiusMeters = radiusKm * 1000;
 
     const query = `
-      SELECT 
-        *,
-        ST_Distance(
-          location::geography,
-          ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
-        ) / 1000 AS distance_km
+      SELECT *, 
+      ST_Distance(
+        location, 
+        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+      ) AS distance
       FROM addresses
-      WHERE 
-        user_id = :userId
-        AND ST_DWithin(
-          location::geography,
-          ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
-          :radiusMeters
-        )
-      ORDER BY distance_km ASC
+      WHERE ST_DWithin(
+        location, 
+        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography, 
+        :radiusMeters
+      )
+      ORDER BY distance ASC
     `;
 
-    const addresses = await sequelize.query(query, {
-      replacements: {
-        userId,
-        latitude,
-        longitude,
-        radiusMeters: radiusKm * 1000,
-      },
+    const results = await sequelize.query(query, {
+      replacements: { longitude, latitude, radiusMeters },
       type: sequelize.QueryTypes.SELECT,
+      model: Address,
+      mapToModel: true,
     });
 
-    return addresses;
+    return results;
   }
 }
 

@@ -134,7 +134,7 @@ class CloudinaryService {
       maxFiles = 5,
     } = options;
 
-    const storage = this.getStorage({ folder, allowedFormats });
+    const storage = this.getStorage({ folder, allowedFormats }) || multer.memoryStorage();
 
     return multer({
       storage,
@@ -143,9 +143,14 @@ class CloudinaryService {
         files: maxFiles,
       },
       fileFilter: (req, file, cb) => {
-        // Check file type
-        const ext = file.originalname.split('.').pop().toLowerCase();
-        if (allowedFormats.includes(ext)) {
+        // Check file type by extension
+        const originalName = file.originalname || '';
+        const ext = originalName.split('.').pop().toLowerCase();
+        
+        // Check file type by mimetype (e.g., 'image/png' -> 'png')
+        const mimeType = file.mimetype ? file.mimetype.split('/')[1] : '';
+        
+        if (allowedFormats.includes(ext) || allowedFormats.includes(mimeType)) {
           cb(null, true);
         } else {
           cb(new Error(`Invalid file type. Allowed: ${allowedFormats.join(', ')}`));

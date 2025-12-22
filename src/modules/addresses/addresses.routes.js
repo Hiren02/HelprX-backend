@@ -22,5 +22,6 @@ router.put('/:id/set-default', addressController.setDefaultAddress);
 // Worker address routes (worker-specific)
 router.post('/worker', isWorker, validate(createAddressSchema), addressController.createWorkerAddress);
 router.get('/worker/list', isWorker, addressController.getWorkerAddresses);
+router.put('/worker/:id', isWorker, validate(updateAddressSchema), addressController.updateWorkerAddress);
 
 module.exports = router;

@@ -5,6 +5,7 @@ const createAddressSchema = Joi.object({
   addressLine: Joi.string().required().messages({
     'any.required': 'Address line is required',
   }),
+  landmark: Joi.string().max(255).optional().allow(''),
   city: Joi.string().max(100).required().messages({
     'any.required': 'City is required',
   }),
@@ -29,6 +30,7 @@ const createAddressSchema = Joi.object({
 const updateAddressSchema = Joi.object({
   label: Joi.string().max(100).optional().allow(''),
   addressLine: Joi.string().optional(),
+  landmark: Joi.string().max(255).optional().allow(''),
   city: Joi.string().max(100).optional(),
   state: Joi.string().max(100).optional(),
   pincode: Joi.string().max(20).optional(),

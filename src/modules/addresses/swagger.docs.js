@@ -26,6 +26,9 @@
  *               addressLine:
  *                 type: string
  *                 example: "123 Main Street, Sector 15"
+ *               landmark:
+ *                 type: string
+ *                 example: "Opposite Central Mall"
  *               city:
  *                 type: string
  *                 example: "Mumbai"

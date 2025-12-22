@@ -9,20 +9,10 @@ const Address = sequelize.define('Address', {
   },
   userId: {
     type: DataTypes.UUID,
-    allowNull: true, // Made optional to support worker addresses
+    allowNull: false,
     field: 'user_id',
     references: {
       model: 'users',
-      key: 'id',
-    },
-    onDelete: 'CASCADE',
-  },
-  workerId: {
-    type: DataTypes.UUID,
-    allowNull: true, // For worker's shop/service addresses
-    field: 'worker_id',
-    references: {
-      model: 'workers',
       key: 'id',
     },
     onDelete: 'CASCADE',
@@ -36,6 +26,10 @@ const Address = sequelize.define('Address', {
     type: DataTypes.TEXT,
     allowNull: false,
     field: 'address_line',
+  },
+  landmark: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
   },
   city: {
     type: DataTypes.STRING(100),
@@ -75,27 +69,23 @@ const Address = sequelize.define('Address', {
     defaultValue: false,
     field: 'is_default',
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    field: 'created_at',
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: 'updated_at',
+  },
 }, {
   tableName: 'addresses',
   timestamps: true,
   underscored: true,
   indexes: [
     { fields: ['user_id'] },
-    { fields: ['worker_id'] },
     { fields: ['pincode'] },
     // GIST index for location will be created in migration
   ],
-  validate: {
-    // Ensure address belongs to either user OR worker, not both
-    eitherUserOrWorker() {
-      if (!this.userId && !this.workerId) {
-        throw new Error('Address must belong to either a user or a worker');
-      }
-      if (this.userId && this.workerId) {
-        throw new Error('Address cannot belong to both user and worker');
-      }
-    },
-  },
   hooks: {
     beforeSave: (address) => {
       // Set location point from latitude and longitude
