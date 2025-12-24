@@ -59,6 +59,11 @@ const User = sequelize.define('User', {
     allowNull: true,
     field: 'refresh_token',
   },
+  profileImage: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'profile_image',
+  },
 }, {
   tableName: 'users',
   timestamps: true,

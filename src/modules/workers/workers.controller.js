@@ -84,23 +84,40 @@ class WorkerController {
    * POST /api/v1/workers/kyc
    */
   uploadKYC = asyncHandler(async (req, res) => {
-    // Files are uploaded via Cloudinary middleware
-    // req.files contains the uploaded files
     const documents = {};
-    const requiredDocs = ['aadhar', 'pan', 'drivingLicense', 'photo'];
+    const requiredDocs = ['aadhar', 'pan', 'photo']; // drivingLicense is optional based on frontend payload observation, but keeping others
     const missingDocs = [];
 
-    if (!req.files) {
-        return ApiResponse.badRequest(res, 'No files uploaded');
-    }
-
-    requiredDocs.forEach(docField => {
-        if (req.files[docField] && req.files[docField][0]) {
-            documents[docField] = req.files[docField][0].path;
+    // Support both multipart/form-data (req.files) and JSON base64 (req.body.documents)
+    if (req.body.documents && typeof req.body.documents === 'object') {
+      const base64Docs = req.body.documents;
+      
+      for (const docField of requiredDocs) {
+        if (base64Docs[docField]) {
+          try {
+            const result = await cloudinaryService.uploadBase64(base64Docs[docField], {
+              folder: 'helprx/kyc',
+            });
+            documents[docField] = result.url;
+          } catch (error) {
+            console.error(`Error uploading base64 for ${docField}:`, error);
+            return ApiResponse.error(res, `Failed to upload ${docField} document`);
+          }
         } else {
-            missingDocs.push(docField);
+          missingDocs.push(docField);
         }
-    });
+      }
+    } else if (req.files) {
+      requiredDocs.forEach(docField => {
+        if (req.files[docField] && req.files[docField][0]) {
+          documents[docField] = req.files[docField][0].path;
+        } else {
+          missingDocs.push(docField);
+        }
+      });
+    } else {
+      return ApiResponse.badRequest(res, 'No files or documents uploaded');
+    }
 
     if (missingDocs.length > 0) {
       return ApiResponse.badRequest(res, `Missing required documents: ${missingDocs.join(', ')}`);
@@ -115,7 +132,7 @@ class WorkerController {
    * GET /api/v1/workers/stats
    */
   getStats = asyncHandler(async (req, res) => {
-    const stats = await workerService.getWorkerStats(req.user.id);
+    const stats = await workerService.getWorkerStats(req.user.id, req.query);
     return ApiResponse.success(res, stats, 'Statistics retrieved successfully');
   });
 
@@ -132,6 +149,22 @@ class WorkerController {
       parseInt(req.query.limit) || 10,
       result.total,
       'Jobs retrieved successfully'
+    );
+  });
+
+  /**
+   * Get worker job inbox
+   * GET /api/v1/workers/inbox
+   */
+  getInbox = asyncHandler(async (req, res) => {
+    const result = await workerService.getWorkerInbox(req.user.id, req.query);
+    return ApiResponse.paginated(
+      res,
+      result.invites,
+      result.page,
+      parseInt(req.query.limit) || 10,
+      result.total,
+      'Inbox retrieved successfully'
     );
   });
 }

@@ -54,6 +54,36 @@ class CloudinaryService {
   }
 
   /**
+   * Upload base64 image to Cloudinary
+   * @param {string} base64String - Base64 encoded image string
+   * @param {Object} options - Upload options
+   * @returns {Promise<Object>} - Upload result with URL
+   */
+  async uploadBase64(base64String, options = {}) {
+    try {
+      const { folder = 'helprx', resourceType = 'image', transformation } = options;
+
+      const result = await cloudinary.uploader.upload(base64String, {
+        folder,
+        resource_type: resourceType,
+        transformation,
+      });
+
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+        format: result.format,
+        width: result.width,
+        height: result.height,
+        bytes: result.bytes,
+      };
+    } catch (error) {
+      logger.error('Error uploading base64 to Cloudinary:', error);
+      throw new Error('Failed to upload base64 image');
+    }
+  }
+
+  /**
    * Upload multiple images
    * @param {Array} files - Array of file buffers
    * @param {Object} options - Upload options

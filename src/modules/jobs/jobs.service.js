@@ -1,9 +1,11 @@
-const { Job, JobCandidate, Address, Worker, User } = require('../../database/models');
+const { Job, User, Worker, Address, JobCandidate, Rating } = require('../../database/models');
 const { JOB_STATUS, CANDIDATE_STATUS, SUCCESS_MESSAGES } = require('../../common/constants');
+const walletService = require('../wallet/wallet.service');
 const matchingService = require('../matching/matching.service');
-const pricingService = require('../pricing/pricing.service');
 const notificationService = require('../notifications/notifications.service');
+const pricingService = require('../pricing/pricing.service');
 const logger = require('../../common/utils/logger');
+const { Op } = require('sequelize');
 
 class JobService {
   /**
@@ -100,46 +102,75 @@ class JobService {
    * Worker accepts a job
    */
   async acceptJob(workerId, jobId) {
-    const candidate = await JobCandidate.findOne({
-      where: { jobId, workerId },
-    });
+    const transaction = await require('../../config/database').sequelize.transaction();
 
-    if (!candidate) {
-      throw new Error('Job candidate not found');
+    try {
+      const candidate = await JobCandidate.findOne({
+        where: { jobId, workerId },
+        transaction,
+      });
+
+      if (!candidate) {
+        throw new Error('Job candidate not found or you were not invited');
+      }
+
+      if (candidate.finalStatus !== CANDIDATE_STATUS.PENDING) {
+        throw new Error('You have already responded to this job');
+      }
+
+      // Check if job is still available AND lock the row
+      const job = await Job.findByPk(jobId, { transaction, lock: transaction.LOCK.UPDATE });
+      
+      if (!job) {
+        throw new Error('Job not found');
+      }
+
+      if (job.status !== JOB_STATUS.MATCHING) {
+        // If assignedWorkerId is set, someone else took it
+        if (job.assignedWorkerId) {
+           throw new Error('This job has already been accepted by another worker');
+        }
+        throw new Error('Job is no longer available');
+      }
+
+      if (job.assignedWorkerId) {
+        throw new Error('This job has already been accepted by another worker');
+      }
+
+      // Update candidate status
+      await candidate.update({
+        acceptedAt: new Date(),
+        finalStatus: CANDIDATE_STATUS.ACCEPTED,
+      }, { transaction });
+
+      // Assign job to worker
+      await job.update({
+        assignedWorkerId: workerId,
+        status: JOB_STATUS.ASSIGNED, // Or SCHEDULED depending on flow, usually ASSIGNED first
+      }, { transaction });
+
+      // Decline other candidates
+      await JobCandidate.update(
+        { finalStatus: CANDIDATE_STATUS.DECLINED },
+        { 
+          where: { 
+            jobId, 
+            workerId: { [require('sequelize').Op.ne]: workerId } 
+          },
+          transaction 
+        }
+      );
+
+      await transaction.commit();
+
+      // Notify customer (outside transaction)
+      await notificationService.sendJobNotification(job.userId, job, 'job_assigned');
+
+      return job;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
-
-    if (candidate.finalStatus !== CANDIDATE_STATUS.PENDING) {
-      throw new Error('Job already responded to');
-    }
-
-    // Check if job is still available
-    const job = await Job.findByPk(jobId);
-    if (job.status !== JOB_STATUS.MATCHING) {
-      throw new Error('Job is no longer available');
-    }
-
-    // Update candidate status
-    await candidate.update({
-      acceptedAt: new Date(),
-      finalStatus: CANDIDATE_STATUS.ACCEPTED,
-    });
-
-    // Assign job to worker
-    await job.update({
-      assignedWorkerId: workerId,
-      status: JOB_STATUS.ASSIGNED,
-    });
-
-    // Decline other candidates
-    await JobCandidate.update(
-      { finalStatus: CANDIDATE_STATUS.DECLINED },
-      { where: { jobId, workerId: { [require('sequelize').Op.ne]: workerId } } }
-    );
-
-    // Notify customer
-    await notificationService.sendJobNotification(job.userId, job, 'job_assigned');
-
-    return job;
   }
 
   /**
@@ -220,6 +251,22 @@ class JobService {
     // Update worker stats
     await Worker.increment('completedJobs', { where: { id: workerId } });
 
+    // Credit worker wallet
+    // Credit worker wallet
+    console.log(`Crediting wallet for worker ${workerId} with amount ${workerEarnings} for job ${job.id}`);
+    try {
+      await walletService.creditWallet(
+        workerId,
+        workerEarnings,
+        job.id,
+        `Payment for Job: ${job.title}`
+      );
+      console.log('Wallet credited successfully');
+    } catch (error) {
+      console.error('Failed to credit wallet:', error);
+      // We might want to throw or handle this - for now logging to diagnose
+    }
+
     // Notify customer
     await notificationService.sendJobNotification(job.userId, job, 'job_completed');
 
@@ -266,7 +313,7 @@ class JobService {
       include: [
         { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
         { model: Address, as: 'address' },
-        { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'phone', 'avgRating'] },
+        { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'phone', 'avgRating', 'profileImage'] },
       ],
     });
 
@@ -302,7 +349,7 @@ class JobService {
       where,
       include: [
         { model: Address, as: 'address' },
-        { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'avgRating'] },
+        { model: Worker, as: 'assignedWorker', attributes: ['id', 'name', 'avgRating', 'profileImage'] },
       ],
       order: [['created_at', 'DESC']],
       limit,
@@ -326,7 +373,13 @@ class JobService {
 
     const where = { assignedWorkerId: workerId };
     if (status) {
-      where.status = status;
+      if (status === 'active') {
+        where.status = { [Op.in]: [JOB_STATUS.ASSIGNED, JOB_STATUS.IN_PROGRESS] };
+      } else if (status === 'history') {
+        where.status = { [Op.in]: [JOB_STATUS.COMPLETED, JOB_STATUS.CANCELLED, JOB_STATUS.DISPUTED] };
+      } else {
+        where.status = status;
+      }
     }
 
     const { count, rows } = await Job.findAndCountAll({

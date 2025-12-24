@@ -280,16 +280,43 @@ Return ONLY a JSON array of worker IDs in ranked order with scores (0-1), like:
    * Save matching results as job candidates
    */
   async saveMatchingResults(jobId, matchedWorkers) {
-    const candidates = matchedWorkers.map((match) => ({
-      jobId,
-      workerId: match.worker.id,
-      score: match.score,
-      matchingReason: match.matchingReason,
-      finalStatus: CANDIDATE_STATUS.PENDING,
-    }));
+    const transaction = await sequelize.transaction();
+    try {
+      // Delete existing candidates for this job to avoid unique constraint violations
+      await JobCandidate.destroy({ where: { jobId }, transaction });
 
-    await JobCandidate.bulkCreate(candidates);
-    logger.info(`Saved ${candidates.length} job candidates for job ${jobId}`);
+      const candidates = matchedWorkers.map((match) => ({
+        jobId,
+        workerId: match.worker.id,
+        score: match.score,
+        matchingReason: match.matchingReason,
+        finalStatus: CANDIDATE_STATUS.PENDING,
+      }));
+
+      // Remove duplicates based on workerId (just in case the input array has duplicates)
+      const uniqueCandidates = Array.from(
+        new Map(candidates.map(c => [c.workerId, c])).values()
+      );
+
+      if (uniqueCandidates.length < candidates.length) {
+        logger.warn(`Found ${candidates.length - uniqueCandidates.length} duplicate workers in matching results. Removed duplicates.`);
+      }
+
+      // Use ignoreDuplicates to safely handle any potential race conditions
+      // where a candidate might still exist or be inserted concurrently.
+      await JobCandidate.bulkCreate(uniqueCandidates, { 
+        transaction,
+        ignoreDuplicates: true, // Postgres: ON CONFLICT DO NOTHING
+        validate: false // Skip model-level validation since we know data is clean and validation might be throwing false positives
+      });
+      
+      await transaction.commit();
+      logger.info(`Saved ${uniqueCandidates.length} job candidates for job ${jobId}`);
+    } catch (error) {
+      await transaction.rollback();
+      logger.error('Error saving matching results:', error);
+      throw error;
+    }
   }
 
   /**

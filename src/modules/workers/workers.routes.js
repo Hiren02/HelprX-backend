@@ -26,6 +26,7 @@ router.put('/availability', validate(updateAvailabilitySchema), workerController
 router.post('/kyc', uploadKYCDocuments, workerController.uploadKYC);
 router.get('/stats', workerController.getStats);
 router.get('/jobs', workerController.getJobs);
+router.get('/inbox', workerController.getInbox);
 
 module.exports = router;
 
