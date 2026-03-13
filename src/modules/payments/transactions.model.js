@@ -86,6 +86,18 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    field: 'created_at',
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: 'updated_at',
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+  },
 }, {
   tableName: 'transactions',
   timestamps: true,

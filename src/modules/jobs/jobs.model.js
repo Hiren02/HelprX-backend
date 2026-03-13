@@ -124,6 +124,18 @@ const Job = sequelize.define('Job', {
     field: 'cancelled_by',
     comment: 'user or worker',
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    field: 'created_at',
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: 'updated_at',
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+  },
 }, {
   tableName: 'jobs',
   timestamps: true,

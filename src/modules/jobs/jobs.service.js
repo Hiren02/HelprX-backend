@@ -39,7 +39,7 @@ class JobService {
       attachments: attachments || [],
       preferredTimeStart,
       preferredTimeEnd,
-      priceEstimate: priceEstimate.total,
+      priceEstimate: Number(priceEstimate.total),
       surgeMultiplier: priceEstimate.surgeMultiplier,
       status: JOB_STATUS.CREATED,
     });
@@ -164,7 +164,10 @@ class JobService {
       await transaction.commit();
 
       // Notify customer (outside transaction)
-      await notificationService.sendJobNotification(job.userId, job, 'job_assigned');
+      const enrichedJob = await Job.findByPk(jobId, {
+        include: [{ model: Worker, as: 'assignedWorker', attributes: ['id', 'name'] }]
+      });
+      await notificationService.sendJobNotification(job.userId, enrichedJob, 'job_assigned');
 
       return job;
     } catch (error) {
@@ -243,9 +246,9 @@ class JobService {
     await job.update({
       status: JOB_STATUS.COMPLETED,
       completedAt: new Date(),
-      finalPrice,
-      platformFee,
-      workerEarnings,
+      finalPrice: Number(finalPrice),
+      platformFee: Number(platformFee),
+      workerEarnings: Number(workerEarnings),
     });
 
     // Update worker stats

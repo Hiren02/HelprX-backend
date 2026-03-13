@@ -113,6 +113,15 @@ class AdminController {
   });
 
   /**
+   * Get job by ID
+   * GET /api/v1/admin/jobs/:id
+   */
+  getJobById = asyncHandler(async (req, res) => {
+    const job = await adminService.getJobById(req.params.id);
+    return ApiResponse.success(res, job, 'Job retrieved successfully');
+  });
+
+  /**
    * Manually assign job to worker
    * POST /api/v1/admin/jobs/:id/assign
    */

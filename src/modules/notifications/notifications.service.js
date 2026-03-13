@@ -1,5 +1,6 @@
-const { Notification } = require('../../database/models');
+const { Notification, Worker } = require('../../database/models');
 const { NOTIFICATION_TYPES, NOTIFICATION_CHANNELS } = require('../../common/constants');
+const { Op } = require('sequelize');
 const logger = require('../../common/utils/logger');
 
 // Uncomment to enable external notification services
@@ -37,30 +38,33 @@ class NotificationService {
    * Get notification data based on job and type
    */
   getJobNotificationData(job, notificationType) {
+    const serviceName = job.serviceType || 'job';
     const notifications = {
       job_available: {
         title: 'New Job Available',
-        body: `New ${job.serviceType} job available near you`,
+        body: `New ${serviceName} job available near you`,
         data: { jobId: job.id, serviceType: job.serviceType },
       },
       job_assigned: {
         title: 'Job Assigned',
-        body: `Your job has been assigned to a worker`,
+        body: job.assignedWorker 
+          ? `Your ${serviceName} job has been assigned to ${job.assignedWorker.name}`
+          : `Your ${serviceName} job has been assigned to a worker`,
         data: { jobId: job.id },
       },
       job_started: {
         title: 'Job Started',
-        body: `Worker has started working on your job`,
+        body: `Worker has started working on your ${serviceName} job`,
         data: { jobId: job.id },
       },
       job_completed: {
         title: 'Job Completed',
-        body: `Your job has been completed`,
+        body: `Your ${serviceName} job has been completed`,
         data: { jobId: job.id },
       },
       job_cancelled: {
         title: 'Job Cancelled',
-        body: `Job has been cancelled`,
+        body: `Your ${serviceName} job has been cancelled`,
         data: { jobId: job.id },
       },
     };
@@ -73,8 +77,11 @@ class NotificationService {
    */
   async sendInAppNotification(recipientId, notificationData, type) {
     try {
-      await Notification.create({
-        userId: recipientId,
+      // Determine if recipientId is a workerId or userId
+      // Based on type: job_available is for workers
+      const isWorkerNotification = type === 'job_available';
+      
+      const notificationFields = {
         type,
         channel: NOTIFICATION_CHANNELS.IN_APP,
         title: notificationData.title,
@@ -82,9 +89,17 @@ class NotificationService {
         data: notificationData.data,
         sentAt: new Date(),
         deliveryStatus: 'sent',
-      });
+      };
 
-      logger.info(`In-app notification sent to ${recipientId}`);
+      if (isWorkerNotification) {
+        notificationFields.workerId = recipientId;
+      } else {
+        notificationFields.userId = recipientId;
+      }
+
+      await Notification.create(notificationFields);
+
+      logger.info(`In-app notification sent to ${recipientId} (Type: ${type})`);
     } catch (error) {
       logger.error(`Failed to send in-app notification:`, error);
     }
@@ -205,16 +220,31 @@ class NotificationService {
     const { page = 1, limit = 20, unreadOnly = false } = filters;
     const offset = (page - 1) * limit;
 
-    const where = { userId };
-    if (unreadOnly) {
+    // Handle string booleans from query params
+    const isUnreadOnly = unreadOnly === true || unreadOnly === 'true';
+
+    // Find associated worker if exists to fetch their notifications too
+    const worker = await Worker.findOne({ where: { userId } });
+    
+    const where = {
+      [Op.or]: [
+        { userId },
+      ]
+    };
+
+    if (worker) {
+      where[Op.or].push({ workerId: worker.id });
+    }
+
+    if (isUnreadOnly) {
       where.isRead = false;
     }
 
     const { count, rows } = await Notification.findAndCountAll({
       where,
       order: [['created_at', 'DESC']],
-      limit,
-      offset,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
     });
 
     return {
@@ -229,9 +259,21 @@ class NotificationService {
    * Mark notification as read
    */
   async markAsRead(notificationId, userId) {
+    const worker = await Worker.findOne({ where: { userId } });
+    const where = {
+      id: notificationId,
+      [Op.or]: [
+        { userId },
+      ]
+    };
+
+    if (worker) {
+      where[Op.or].push({ workerId: worker.id });
+    }
+
     await Notification.update(
       { isRead: true, readAt: new Date() },
-      { where: { id: notificationId, userId } }
+      { where }
     );
   }
 
@@ -239,9 +281,21 @@ class NotificationService {
    * Mark all notifications as read
    */
   async markAllAsRead(userId) {
+    const worker = await Worker.findOne({ where: { userId } });
+    const where = {
+      isRead: false,
+      [Op.or]: [
+        { userId },
+      ]
+    };
+
+    if (worker) {
+      where[Op.or].push({ workerId: worker.id });
+    }
+
     await Notification.update(
       { isRead: true, readAt: new Date() },
-      { where: { userId, isRead: false } }
+      { where }
     );
   }
 }

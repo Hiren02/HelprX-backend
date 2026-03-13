@@ -44,9 +44,9 @@ class AnalyticsService {
       totalJobs,
       completedJobs,
       activeJobs,
-      totalRevenue: totalRevenue || 0,
-      avgJobValue: parseFloat(avgJobValue).toFixed(2),
-      completionRate: totalJobs > 0 ? ((completedJobs / totalJobs) * 100).toFixed(2) : 0,
+      totalRevenue: Number(totalRevenue || 0),
+      avgJobValue: Number(parseFloat(avgJobValue || 0).toFixed(2)),
+      completionRate: totalJobs > 0 ? Number(((completedJobs / totalJobs) * 100).toFixed(2)) : 0,
     };
   }
 

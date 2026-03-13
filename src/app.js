@@ -32,7 +32,8 @@ app.use(helmet());
 
 // CORS
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  // origin: process.env.CORS_ORIGIN || '*',
+  origin: '*',
   credentials: true,
 }));
 

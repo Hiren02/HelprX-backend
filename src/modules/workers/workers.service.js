@@ -153,10 +153,10 @@ class WorkerService {
       completedJobs,
       activeJobs,
       totalRatings,
-      avgRating,
-      acceptanceRate: worker.acceptanceRate,
-      walletBalance: wallet ? wallet.balance : 0,
-      totalEarnings: wallet ? wallet.totalEarnings : 0,
+      avgRating: Number(avgRating || 0),
+      acceptanceRate: Number(worker.acceptanceRate || 0),
+      walletBalance: Number(wallet ? wallet.balance : 0),
+      totalEarnings: Number(wallet ? wallet.totalEarnings : 0),
       dailyEarnings: historicalEarnings,
     };
   }

@@ -216,6 +216,30 @@ class AdminService {
   }
 
   /**
+   * Get job details by ID
+   */
+  async getJobById(jobId) {
+    const job = await Job.findByPk(jobId, {
+      include: [
+        { model: User, as: 'customer', attributes: ['id', 'name', 'phone', 'email', 'created_at'] },
+        { 
+          model: Worker, 
+          as: 'assignedWorker', 
+          attributes: ['id', 'name', 'phone', 'avgRating', 'completedJobs'],
+          include: [{ model: User, as: 'user', attributes: ['email'] }]
+        },
+        { model: Address, as: 'address' },
+      ],
+    });
+
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    return job;
+  }
+
+  /**
    * Manually assign worker to job
    */
   async manuallyAssignJob(jobId, workerId) {

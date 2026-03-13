@@ -32,6 +32,7 @@ router.get('/kyc/pending', adminController.getPendingKYC);
 
 // ========== Job Management ==========
 router.get('/jobs', adminController.getAllJobs);
+router.get('/jobs/:id', adminController.getJobById);
 router.post('/jobs/:id/assign', validate(manualAssignSchema), adminController.manuallyAssignJob);
 router.put('/jobs/:id/cancel', validate(cancelJobSchema), adminController.cancelJob);
 router.put('/jobs/:id/complete', validate(completeJobSchema), adminController.completeJob);
